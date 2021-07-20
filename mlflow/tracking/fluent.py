@@ -9,6 +9,7 @@ import time
 import logging
 import inspect
 from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
+import pandas as pd 
 
 from mlflow.entities import Experiment, Run, RunInfo, RunStatus, Param, RunTag, Metric, ViewType
 from mlflow.entities.lifecycle_stage import LifecycleStage
@@ -49,6 +50,14 @@ NUM_RUNS_PER_PAGE_PANDAS = 10000
 
 _logger = logging.getLogger(__name__)
 
+def ingest(source, feature_keys, entity_name, entity_type):
+    return MlflowClient().ingest(source, feature_keys, entity_name, entity_type)
+
+def retrieve(feature_keys, entity_df) -> pd.DataFrame:
+    return MlflowClient().retrieve(feature_keys, entity_df)
+
+def register_dataset(feature_keys, dataset) -> None:
+    return MlflowClient().register_dataset(feature_keys, dataset)
 
 def set_experiment(experiment_name: str) -> None:
     """

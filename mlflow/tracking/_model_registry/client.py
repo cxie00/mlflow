@@ -47,6 +47,7 @@ class ModelRegistryClient(object):
         """
         # TODO: Do we want to validate the name is legit here - non-empty without "/" and ":" ?
         #       Those are constraints applicable to any backend, given the model URI format.
+        print("in model reg")
         tags = tags if tags else {}
         tags = [RegisteredModelTag(key, str(value)) for key, value in tags.items()]
         return self.store.create_registered_model(name, tags, description)

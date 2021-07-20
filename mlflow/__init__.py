@@ -149,8 +149,9 @@ delete_experiment = mlflow.tracking.fluent.delete_experiment
 delete_run = mlflow.tracking.fluent.delete_run
 register_model = mlflow.tracking._model_registry.fluent.register_model
 autolog = mlflow.tracking.fluent.autolog
-
-
+ingest = mlflow.tracking.fluent.ingest
+retrieve = mlflow.tracking.fluent.retrieve
+register_dataset = mlflow.tracking.fluent.register_dataset
 run = projects.run
 
 __all__ = [

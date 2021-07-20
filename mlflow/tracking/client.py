@@ -6,12 +6,14 @@ and is exposed in the :py:mod:`mlflow.tracking` module.
 import contextlib
 import logging
 import json
+from mlflow.tracking._feature_store.client import FeatureStoreClient
 import os
 import posixpath
 import sys
 import tempfile
 import yaml
 from typing import Any, Dict, Sequence, List, Optional, Union, TYPE_CHECKING
+import pandas as pd
 
 from mlflow.entities import Experiment, Run, RunInfo, Param, Metric, RunTag, FileInfo, ViewType
 from mlflow.store.entities.paged_list import PagedList
@@ -69,6 +71,7 @@ class MlflowClient(object):
         final_tracking_uri = utils._resolve_tracking_uri(tracking_uri)
         self._registry_uri = registry_utils._resolve_registry_uri(registry_uri, tracking_uri)
         self._tracking_client = TrackingServiceClient(final_tracking_uri)
+        self._feature_store = FeatureStoreClient()
         # `MlflowClient` also references a `ModelRegistryClient` instance that is provided by the
         # `MlflowClient._get_registry_client()` method. This `ModelRegistryClient` is not explicitly
         # defined as an instance variable in the `MlflowClient` constructor; an instance variable
@@ -108,6 +111,17 @@ class MlflowClient(object):
                 )
         return registry_client
 
+    # Feature Store API
+    
+    def ingest(self, source, feature_keys, entity_name, entity_type):
+        return self._feature_store.ingest(source, feature_keys, entity_name, entity_type)
+
+    def retrieve(self, feature_keys, entity_df) -> pd.DataFrame:
+        return self._feature_store.retrieve(feature_keys, entity_df)
+    
+    def register_dataset(self, feature_keys, dataset) -> None:
+        return self._feature_store.register_dataset(feature_keys, dataset)
+        
     # Tracking API
 
     def get_run(self, run_id: str) -> Run:
