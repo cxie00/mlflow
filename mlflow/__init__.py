@@ -151,8 +151,8 @@ register_model = mlflow.tracking._model_registry.fluent.register_model
 autolog = mlflow.tracking.fluent.autolog
 ingest = mlflow.tracking.fluent.ingest
 retrieve = mlflow.tracking.fluent.retrieve
-register_dataset = mlflow.tracking.fluent.register_dataset
 run = projects.run
+MLFeature = mlflow.tracking.fluent.MLFeature
 
 __all__ = [
     "ActiveRun",

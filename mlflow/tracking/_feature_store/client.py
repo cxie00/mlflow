@@ -22,7 +22,7 @@ class FeatureStoreClient(object):
             source (str or pd.Dataframe): Either a file path to parquet file to ingest batch data into offline store.
             feature_keys (List[MLFeature]): A list of MLFeature objects that should be ingested into the offline store.
         Returns:
-            Void or raises exception if feature_keys can’t be found.
+            Dataframe of all data ingested with columns of entity_name and datetime.
         Example usage:
             batch_context.ingest(source=“data/drivers.parquet”, feature_keys=[{"name":"avg_cost", "type": ValueType.INT64}]) 
 
@@ -36,8 +36,10 @@ class FeatureStoreClient(object):
         entity_type = self._convertToValueType(entity_type)
         entity = Entity(name=entity_name, value_type=entity_type, description="")
 
-        # update metadata with group uuids for Cataloging API
+        entity_df = self._create_entity(source, entity_name)
+        # update metadata with group uuids for Cataloging and Lineage API
         self._update_metadata(feature_keys)
+        self._register_dataset(feature_keys, source)
 
         # our parquet files contain sample data that includes a driver_id column, timestamps and
         # three feature column. 
@@ -46,14 +48,15 @@ class FeatureStoreClient(object):
             entities=[entity.name],
             ttl=Duration(seconds=86400 * 1),
             features=[Feature(name=feature.name, dtype=feature.type) for feature in feature_keys],
-            online=True,
+            online=False, 
             input=file_stats,
             tags={},
         )
 
         # creates and updates registry.db metadata
         self.fs.apply([entity, feature_view])
-
+        return entity_df
+        
     def retrieve(self, feature_keys, entity_df) -> pd.DataFrame:
 
         """
@@ -81,7 +84,7 @@ class FeatureStoreClient(object):
 
         return training_df
 
-    def register_dataset(self, feature_keys, dataset) -> None:
+    def _register_dataset(self, feature_keys, dataset) -> None:
         """
         Takes a dataframe (or csv or parquet file, however data is ingested) 
         and registers it as a dataset within the system, giving it a uuid 
@@ -158,6 +161,14 @@ class FeatureStoreClient(object):
         conn.commit()
         conn.close()
 
+    def _create_entity(self, source, entity_name):
+        
+        df = pd.read_parquet(source, engine='auto')
+        entity_df = pd.DataFrame.from_dict({
+            entity_name: [id for id in df[entity_name]],
+            "event_timestamp": [timestamp for timestamp in df["datetime"]]
+            })
+        return entity_df
     def _convertToValueType(self, dtype) -> ValueType:
 
         """
@@ -186,3 +197,16 @@ class FeatureStoreClient(object):
             return ValueType.FLOAT
         else:
             raise Exception("Type does not exist. Acceptable Pandas types: 'int32', 'int64', 'str', 'bool, 'float32', 'float64', 'category', 'bytes'" )
+
+class MLFeature():
+
+    """
+        Feature object that represents a feature. 
+        Params:
+            name (str): Name of feature
+            type (str): Pandas datatype of feature
+    """
+    
+    def __init__(self, name, type) -> None:
+        self.name = name
+        self.type = type

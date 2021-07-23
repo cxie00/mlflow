@@ -118,9 +118,6 @@ class MlflowClient(object):
 
     def retrieve(self, feature_keys, entity_df) -> pd.DataFrame:
         return self._feature_store.retrieve(feature_keys, entity_df)
-    
-    def register_dataset(self, feature_keys, dataset) -> None:
-        return self._feature_store.register_dataset(feature_keys, dataset)
         
     # Tracking API
 

@@ -212,7 +212,6 @@ class TrackingServiceClient(object):
         """
         Log a parameter against the run ID. Value is converted to a string.
         """
-        print("woooo")
         _validate_param_name(key)
         param = Param(key, str(value))
         self.store.log_param(run_id, param)
