@@ -56,7 +56,7 @@ class FeatureStoreClient(object):
         # creates and updates registry.db metadata
         self.fs.apply([entity, feature_view])
         return entity_df
-        
+
     def retrieve(self, feature_keys, entity_df) -> pd.DataFrame:
 
         """
@@ -86,9 +86,8 @@ class FeatureStoreClient(object):
 
     def _register_dataset(self, feature_keys, dataset) -> None:
         """
-        Takes a dataframe (or csv or parquet file, however data is ingested) 
-        and registers it as a dataset within the system, giving it a uuid 
-        and creating entries in lineage_table_1 which link that dataset_id with all of the feature_ids in it.
+        Internally registers a data source and ingested features as a dataset within the system, giving the dataset a uuid 
+        and creating entries in FEAT_DATA_UUID table which link that dataset_id with all of the feature_ids in it.
         Params:
             feature_keys (List[MLFeature]): A list of MLFeature objects that should be retrieved from the offline store. 
             dataset (str): Name of dataset file or source from which feature_keys come from (i.e. driver_stats.parquet). 
@@ -102,9 +101,9 @@ class FeatureStoreClient(object):
         for feature in feature_keys:
 
             # check if feature is already registered into lineage_table (if: continue, else: register it)
-            feat_query = f"SELECT group_uuid FROM GROUP_UUID_DATA WHERE feature='{feature.name}';"
+            feat_query = f"SELECT feature_uuid FROM GROUP_UUID_DATA WHERE feature='{feature.name}';"
             df = pd.read_sql_query(feat_query,conn)
-            feat_group_uuid = df['group_uuid'].values[0]
+            feat_uuid = df['feature_uuid'].values[0]
             curr.execute("select feature from FEAT_DATA_UUID where feature=?", (feature.name,))
             feature_exists = curr.fetchall()
 
@@ -113,12 +112,12 @@ class FeatureStoreClient(object):
                 data_query = f"SELECT data_uuid FROM FEAT_DATA_UUID WHERE dataset='{dataset}';"
                 df = pd.read_sql_query(data_query,conn)
                 if df.empty:
-                    addData = f"""INSERT INTO FEAT_DATA_UUID VALUES('{feature.name}','{feat_group_uuid}', '{dataset}', '{data_uuid}')"""
+                    addData = f"""INSERT INTO FEAT_DATA_UUID VALUES('{feature.name}','{feat_uuid}', '{dataset}', '{data_uuid}')"""
                     curr.execute(addData)
                     continue           
                 # dataset is already in lineage table: register dataset with existing uuid
                 existing_data_uuid = df['data_uuid'].values[0]
-                addData = f"""INSERT INTO FEAT_DATA_UUID VALUES('{feature.name}','{feat_group_uuid}', '{dataset}', '{existing_data_uuid}')"""
+                addData = f"""INSERT INTO FEAT_DATA_UUID VALUES('{feature.name}','{feat_uuid}', '{dataset}', '{existing_data_uuid}')"""
                 curr.execute(addData)   
 
         conn.commit()
