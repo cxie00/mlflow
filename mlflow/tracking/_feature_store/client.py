@@ -4,6 +4,7 @@ from feast import Entity, FeatureView, Feature, ValueType, FileSource
 import pandas as pd
 import uuid
 import sqlite3
+import os 
 
 class FeatureStoreClient(object):
     """
@@ -14,17 +15,17 @@ class FeatureStoreClient(object):
             repo_path="."
         )
 
-    def ingest(self, source, feature_keys, entity_name, entity_type):
+    def ingest(self, source, features, entity_name, entity_type):
 
         """
         Batch load feature data to publish into offline store.
         Params:
             source (str or pd.Dataframe): Either a file path to parquet file to ingest batch data into offline store.
-            feature_keys (List[MLFeature]): A list of MLFeature objects that should be ingested into the offline store.
+            features (List[MLFeature]): A list of MLFeature objects that should be ingested into the offline store.
         Returns:
             Dataframe of all data ingested with columns of entity_name and datetime.
         Example usage:
-            batch_context.ingest(source=“data/drivers.parquet”, feature_keys=[{"name":"avg_cost", "type": ValueType.INT64}]) 
+            mlflow.ingest(source=“data/drivers.parquet”, feature_keys=[{"name":"avg_cost", "type": ValueType.INT64}]) 
 
         """
         # creating Feast objects and infrastructure
@@ -38,16 +39,18 @@ class FeatureStoreClient(object):
 
         entity_df = self._create_entity(source, entity_name)
         # update metadata with group uuids for Cataloging and Lineage API
-        self._update_metadata(feature_keys)
-        self._register_dataset(feature_keys, source)
+        self._update_metadata(features)
+        self._register_dataset(features, source)
 
         # our parquet files contain sample data that includes a driver_id column, timestamps and
         # three feature column. 
+        f_name = os.path.basename(source)
+        name, f_ext = os.path.splitext(f_name)
         feature_view = FeatureView(
-            name="feature",
+            name=name,
             entities=[entity.name],
             ttl=Duration(seconds=86400 * 1),
-            features=[Feature(name=feature.name, dtype=feature.type) for feature in feature_keys],
+            features=[Feature(name=feature.name, dtype=feature.type) for feature in features],
             online=False, 
             input=file_stats,
             tags={},
@@ -62,19 +65,23 @@ class FeatureStoreClient(object):
         """
         Get features that have been registered already into the offline store.
         Params:
-            feature_keys (List[MLFeature]): A list of MLFeature objects that should be retrieved from the offline store. 
+            feature_keys (Dict{str:List[MLFeature]}): A dictionary containg a key of parquet source and 
+        value of list of MLFeature objects that should be retrieved from the offline store. 
         Returns:
             Some object with the features that can be used for batch inferencing or training.
         Example usage:
-        quality = batch_context.MLFeature("quality", "int64")
-        alcohol = batch_context.MLFeature("alcohol", "float32")
-        feature_keys = [quality, alcohol]
-            feature_df = batch_context.retrieve(feature_keys, entity_df)
+            quality = MLFeature("quality", "int64")
+            alcohol = MLFeature("alcohol", "float32")
+            feature_keys = [quality, alcohol]
+            feature_df = mlflow.retrieve(feature_keys, entity_df)
         """
         
         refs = []
-        for feature_key in feature_keys:
-            refs.append("feature:{}".format(feature_key.name))
+        for source, features in feature_keys.items():
+            f_name = os.path.basename(source)
+            name, f_ext = os.path.splitext(f_name)
+            for feature in features:
+                refs.append("{}:{}".format(name,feature.name))
 
         # retrieving offline data with Feast's get_historical_features
         training_df = self.fs.get_historical_features(
@@ -161,13 +168,21 @@ class FeatureStoreClient(object):
         conn.close()
 
     def _create_entity(self, source, entity_name):
-        
+        """
+        Internal helper method to create a pandas entity dataframe of the data source.
+        Params:
+            source (str or pd.Dataframe): Either a file path to parquet file to ingest batch data into offline store.
+            entity_name (str): Str name to represent primary key of entity.
+        Returns:
+            pandas Dataframe of entire source with event timestamp and entity columns.
+        """
         df = pd.read_parquet(source, engine='auto')
         entity_df = pd.DataFrame.from_dict({
             entity_name: [id for id in df[entity_name]],
             "event_timestamp": [timestamp for timestamp in df["datetime"]]
             })
         return entity_df
+
     def _convertToValueType(self, dtype) -> ValueType:
 
         """
@@ -196,7 +211,6 @@ class FeatureStoreClient(object):
             return ValueType.FLOAT
         else:
             raise Exception("Type does not exist. Acceptable Pandas types: 'int32', 'int64', 'str', 'bool, 'float32', 'float64', 'category', 'bytes'" )
-
 class MLFeature():
 
     """

@@ -56,6 +56,20 @@ def ingest(source, feature_keys, entity_name, entity_type):
 def retrieve(feature_keys, entity_df) -> pd.DataFrame:
     return MlflowClient().retrieve(feature_keys, entity_df)
 
+class MLFeature():
+
+    """
+        Feature object that represents a feature. 
+        Params:
+            name (str): Name of feature
+            type (str): Pandas datatype of feature
+    """
+    
+    def __init__(self, name, type) -> None:
+        self.name = name
+        self.type = type
+
+
 def set_experiment(experiment_name: str) -> None:
     """
     Set given experiment as active experiment. If experiment does not exist, create an experiment
@@ -101,18 +115,6 @@ def set_experiment(experiment_name: str) -> None:
     global _active_experiment_id
     _active_experiment_id = exp_id
 
-class MLFeature():
-
-    """
-        Feature object that represents a feature. 
-        Params:
-            name (str): Name of feature
-            type (str): Pandas datatype of feature
-    """
-    
-    def __init__(self, name, type) -> None:
-        self.name = name
-        self.type = type
         
 class ActiveRun(Run):  # pylint: disable=W0223
     """Wrapper around :py:class:`mlflow.entities.Run` to enable using Python ``with`` syntax."""
