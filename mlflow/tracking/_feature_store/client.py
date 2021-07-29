@@ -15,7 +15,7 @@ class FeatureStoreClient(object):
             repo_path="."
         )
 
-    def ingest(self, source, features, entity_name, entity_type):
+    def ingest(self, source, features, entity_name, entity_type) -> pd.DataFrame:
 
         """
         Batch load feature data to publish into offline store.
@@ -167,7 +167,7 @@ class FeatureStoreClient(object):
         conn.commit()
         conn.close()
 
-    def _create_entity(self, source, entity_name):
+    def _create_entity(self, source, entity_name) -> pd.DataFrame:
         """
         Internal helper method to create a pandas entity dataframe of the data source.
         Params:
