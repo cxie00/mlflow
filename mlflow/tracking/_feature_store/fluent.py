@@ -2,7 +2,7 @@ import pandas as pd
 
 from mlflow.tracking.client import MlflowClient
 
-def ingest(source, feature_keys, entity_name, entity_type):
+def ingest(source, entity_name):
     """
     Batch load feature data to publish into offline store.
     Params:
@@ -13,7 +13,7 @@ def ingest(source, feature_keys, entity_name, entity_type):
     Example usage:
         mlflow.ingest(source=“data/drivers.parquet”, feature_keys=[{"name":"avg_cost", "type": ValueType.INT64}]) 
     """
-    return MlflowClient().ingest(source, feature_keys, entity_name, entity_type)
+    return MlflowClient().ingest(source, entity_name)
 
 def retrieve(feature_keys, entity_df) -> pd.DataFrame:
     """
