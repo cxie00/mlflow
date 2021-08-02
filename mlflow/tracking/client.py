@@ -113,15 +113,24 @@ class MlflowClient(object):
 
     # Feature Store API
     
+    #batch context
     def ingest(self, source, entity_name):
         return self._feature_store.ingest(source, entity_name)
 
     def retrieve(self, feature_keys, entity_df) -> pd.DataFrame:
         return self._feature_store.retrieve(feature_keys, entity_df)
 
+    #cataloging
     def search_features(self, database, filter_string):
         return self._feature_store.search_features(database,filter_string)
-        
+
+    #lineage
+    def infer_signature_override(self, model_input, model_output):
+        return self._feature_store.infer_signature_override(self, model_input, model_output)
+
+    def parse_feature_metadata(self):
+        return self._feature_store.parse_feature_metadata(self)
+
     # Tracking API
 
     def get_run(self, run_id: str) -> Run:

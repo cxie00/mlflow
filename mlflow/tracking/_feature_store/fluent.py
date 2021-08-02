@@ -1,6 +1,14 @@
+from mlflow.exceptions import MlflowException
 import pandas as pd 
 
 from mlflow.tracking.client import MlflowClient
+
+from mlflow.types.schema import DataType, ColSpec
+from mlflow.exceptions import MlflowException
+from typing import Dict, Any, List, Union, Optional
+from mlflow.models.signature import  ModelSignature, Schema
+from mlflow.types.utils import _infer_schema
+from mlflow.tracking._feature_store.client import FeatureColSpec
 
 def ingest(source, entity_name):
     """
@@ -33,3 +41,10 @@ def retrieve(feature_list, entity_df) -> pd.DataFrame:
 
 def search_features(database,filter_string):
     return MlflowClient().search_features(database, filter_string)
+
+def infer_signature_override(self, model_input: Any, model_output: "MlflowInferableDataset" = None
+    ) -> ModelSignature:
+    return MlflowClient().infer_signature_override(self, model_input, model_output) 
+
+def parse_feature_metadata(self) -> List[FeatureColSpec]:
+    return MlflowClient().parse_feature_metadata(self)

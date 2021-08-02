@@ -7,7 +7,22 @@ import uuid
 import sqlite3
 import os 
 
+#lineage imports
+from mlflow.entities import run
+import numpy as np
+import sqlite3
+import sys
+import os
+from mlflow.types.schema import DataType, ColSpec, FeatureColSpec
+from mlflow.exceptions import MlflowException
+from typing import Dict, Any, List, Union, Optional
+from mlflow.models.signature import  ModelSignature, Schema
+from mlflow.types.utils import _infer_schema
+
+
+
 class FeatureStoreClient(object):
+    #Batch Context API
     """
     Client of an MLflow Feature Store that ingests and retrieves batch data.
     """
@@ -220,5 +235,81 @@ class FeatureStoreClient(object):
         if curr.execute(query_string):
             rows = curr.fetchall()
             return rows
+
+    #Lineage API
+    
+
+    def get_data_type(self, type) -> DataType:
+        if type == 'int64' or type == 'int32':
+            return DataType.integer
+        if type == 'bool':
+            return DataType.boolean
+        if type == 'float64' or type == 'float32':
+            return DataType.float
+        if type == 'object':
+            return DataType.string
+        if type == 'datetime64':
+            return DataType.datetime
+        #note: pandas does not have 'long', 'double', 'binary' types
+
+    def parse_feature_metadata(self) -> List[FeatureColSpec]:
+        """This function is called after features have been ingested and 
+        the corresponding metadata.db has been created. Here, we parse
+        through metadata.db and create a list of feature objects"""
+
+        feature_colspec_list = list()
+
+        directory_path = os.getcwd()
+        conn = sqlite3.connect('data\metadata.db')
+        curr = conn.cursor()
+        fetchData = "SELECT * from FEATURE_DATA"
+        curr.execute(fetchData)
+        row = curr.fetchone()
+        while row is not None:
+            #create a new FeatureColSpec for each row
+            row_str = ','.join(row)
+            type = self.get_data_type(row[3])
+            datatype_str = DataType.__repr__(type)
+            name = row[0]
+            id = row[2]
+            feature = FeatureColSpec(type, name, id)
+            feature_colspec_list.append(feature)
+            row = curr.fetchone()
+        return feature_colspec_list
+            
+
+
+    def infer_signature_override(self, model_input: Any, model_output: "MlflowInferableDataset" = None
+    ) -> ModelSignature:
+        print("infer signature override...")
+        inputs = Schema(self.parse_feature_metadata())
+        outputs = _infer_schema(model_output) if model_output is not None else None
+        return ModelSignature(inputs, outputs)
+
+
+    def map_run_to_features(self, feature_list: List[FeatureColSpec], feature_runs_dict) ->None:
+        '''updates the feature_runs_dict. tags the active ml run id to each 
+        corresponding feature in the inputted 
+        list'''
+        run_id = self.active_run().info.run_id
+        for f in feature_list:
+            if f.name in feature_list:
+                value_set = set()
+                x = feature_runs_dict.pop(f.name)
+                value_set.update(x)
+                value_set.add(run_id)
+                feature_runs_dict[f.name] = value_set
+                del value_set
+                del x
+            else:
+                value_set = set()
+                value_set.add(run_id)
+                feature_runs_dict[f.name] = value_set
+                del value_set
+
+    
+
+
+
 
 

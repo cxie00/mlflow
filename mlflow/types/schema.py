@@ -121,6 +121,61 @@ class ColSpec(object):
         else:
             return "{name}: {type}".format(name=repr(self.name), type=repr(self.type))
 
+#added for lineage API
+class FeatureColSpec(ColSpec):
+        """
+        derives from the ColSpec object defined in mlflow
+        In attition to name and type of a colspec, the feature_id is defined
+        """
+
+        def __init__(
+            self, type: DataType, name: Optional[str] = None,  # pylint: disable=redefined-builtin
+            feature_id: Optional[str] = None):
+            self._feature_id = feature_id
+            super().__init__(type, name)
+            
+
+        @property
+        def type(self) -> DataType:
+            """The column data type."""
+            return self._type
+
+        @property
+        def name(self) -> Optional[str]:
+            """The column name or None if the columns is unnamed."""
+            return self._name
+
+        @property
+        def feature_id(self) -> Optional[str]:
+            """The feature id or None if the feature is untagged"""
+            return self._feature_id
+
+        def to_dict(self) -> Dict[str, Any]:
+            if self.name is None and self.feature_id is None:
+                return {"type": self.type.name}
+            if self.name is not None and self.feature_id is None:
+                return {"name": self.name, "type": self.type.name}
+            if self.name is None and self.feature_id is not None:
+                return {"type": self.type.name, "feature_id": self.feature_id}
+            else:
+                return {"name": self.name, "type": self.type.name, "feature_id": self.feature_id}
+
+        def __eq__(self, other) -> bool:
+            if isinstance(other, FeatureColSpec):
+                names_eq = (self.name is None and other.name is None) or self.name == other.name
+                feature_id_eq = (self.feature_id is None and other.Name is None) or self.feature_id == other.feature_id
+                return names_eq and self.type == other.type and feature_id_eq
+            return False
+
+        def __repr__(self) -> str:
+            if self.name is None and self.feature_id is None:
+                return repr(self.type)
+            if self.name is not None and self.feature_id is None:
+                return "{name}: {type}".format(name=repr(self.name), type=repr(self.type))
+            if self.name is None and self.feature_id is not None:
+                return "{type}: {feature_id}".format(type=repr(self.type), feature_id=repr(self.feature_id))
+            else:
+                return "{name}: {type}: {feature_id}".format(name=repr(self.name), type=repr(self.type), feature_id=repr(self.feature_id))
 
 class TensorInfo(object):
     """
