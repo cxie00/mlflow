@@ -79,7 +79,6 @@ class FeatureStoreClient(object):
             feature_keys = ["alcohol", "quality"]
             feature_df = mlflow.retrieve(feature_keys, entity_df)
         """
-        # TODO:!!!!!!!!!!!!!!!! update retrieve to only retrieve on list of feature names and df.... ooof
         entity_name = list(entity_df.drop(["event_timestamp"], axis=1))[0] # future note: assumes only thing left in df is the entity
         refs = []
         conn = sqlite3.connect('data/metadata.db')
