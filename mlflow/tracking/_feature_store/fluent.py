@@ -30,3 +30,6 @@ def retrieve(feature_keys, entity_df) -> pd.DataFrame:
         feature_df = mlflow.retrieve(feature_keys, entity_df)
     """
     return MlflowClient().retrieve(feature_keys, entity_df)
+
+def search_features(database,filter_string):
+    return MlflowClient().search_features(database, filter_string)

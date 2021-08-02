@@ -153,6 +153,7 @@ autolog = mlflow.tracking.fluent.autolog
 ingest = mlflow.tracking._feature_store.fluent.ingest
 retrieve = mlflow.tracking._feature_store.fluent.retrieve
 run = projects.run
+search_features = mlflow.tracking._feature_store.fluent.search_features
 
 
 __all__ = [

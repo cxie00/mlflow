@@ -211,6 +211,16 @@ class FeatureStoreClient(object):
             return ValueType.FLOAT
         else:
             raise Exception("Type does not exist. Acceptable Pandas types: 'int32', 'int64', 'str', 'bool, 'float32', 'float64', 'category', 'bytes'" )
+    #Cataloging API
+    def search_features(self, database, filter_string):
+
+        conn = sqlite3.connect(database)
+        curr = conn.cursor()
+        query_string = "SELECT * FROM FEATURE_DATA WHERE " + filter_string
+
+        if curr.execute(query_string):
+            rows = curr.fetchall()
+            return rows
 class MLFeature():
 
     """
@@ -223,3 +233,5 @@ class MLFeature():
     def __init__(self, name, type) -> None:
         self.name = name
         self.type = type
+
+

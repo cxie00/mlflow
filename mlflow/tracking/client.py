@@ -118,6 +118,9 @@ class MlflowClient(object):
 
     def retrieve(self, feature_keys, entity_df) -> pd.DataFrame:
         return self._feature_store.retrieve(feature_keys, entity_df)
+
+    def search_features(self, database, filter_string):
+        return self._feature_store.search_features(database,filter_string)
         
     # Tracking API
 
