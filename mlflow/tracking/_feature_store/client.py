@@ -43,16 +43,16 @@ class FeatureStoreClient(object):
         entity_df = self._create_entity(source, entity_name)
 
         f_name = os.path.basename(source)
-        name, f_ext = os.path.splitext(f_name)
+        view_name = os.path.splitext(f_name)[0]
 
         features = self._get_features(source_df.drop([entity_name, "created", "datetime"], axis=1)) 
 
         # update metadata with group uuids for Cataloging and Lineage API
-        self._update_metadata(features, name, entity_name)
+        self._update_metadata(features, source, entity_name)
         self._register_dataset(features, source)
 
         feature_view = FeatureView(
-            name=name,
+            name=view_name,
             entities=[entity.name],
             ttl=Duration(seconds=86400 * 1),
             features=[Feature(name=feature.name, dtype=feature.type) for feature in features],
@@ -65,28 +65,32 @@ class FeatureStoreClient(object):
         self.fs.apply([entity, feature_view])
         return entity_df
 
-    def retrieve(self, feature_keys, entity_df) -> pd.DataFrame:
+    def retrieve(self, feature_list, entity_df) -> pd.DataFrame:
 
         """
         Get features that have been registered already into the offline store.
         Params:
-            feature_keys (Dict{str:List[MLFeature]}): A dictionary containg a key of parquet source and 
+            features (List[str]): A dictionary containg a key of parquet source and 
         value of list of MLFeature objects that should be retrieved from the offline store. 
+            entity_df: pandas DataFrame containing entity_name and event_timestamp columns of data to be retrieved.
         Returns:
-            Some object with the features that can be used for batch inferencing or training.
+            pandas DataFrame with the features that can be used for batch inferencing or training.
         Example usage:
-            quality = MLFeature("quality", "int64")
-            alcohol = MLFeature("alcohol", "float32")
-            feature_keys = [quality, alcohol]
+            feature_keys = ["alcohol", "quality"]
             feature_df = mlflow.retrieve(feature_keys, entity_df)
         """
-        
+        # TODO:!!!!!!!!!!!!!!!! update retrieve to only retrieve on list of feature names and df.... ooof
+        entity_name = list(entity_df.drop(["event_timestamp"], axis=1))[0] # future note: assumes only thing left in df is the entity
         refs = []
-        for source, features in feature_keys.items():
-            f_name = os.path.basename(source)
-            name, f_ext = os.path.splitext(f_name)
-            for feature in features:
-                refs.append("{}:{}".format(name,feature.name))
+        conn = sqlite3.connect('data/metadata.db')
+        for feature in feature_list:
+            # from metadata.db, grab the view_name whose feature str matches feature AND has the same entity name
+            view_query = f"SELECT view_name FROM GROUP_UUID_DATA WHERE feature='{feature.name}' and entity_name='{entity_name}';"
+            df = pd.read_sql_query(view_query,conn)
+            view = df['feature_uuid'].values[0]
+            refs.append("{}:{}".format(view,feature))    
+        conn.commit()
+        conn.close()
 
         # retrieving offline data with Feast's get_historical_features
         training_df = self.fs.get_historical_features(
@@ -112,13 +116,14 @@ class FeatureStoreClient(object):
         and creating entries in FEAT_DATA_UUID table which link that dataset_id with all of the feature_ids in it.
         Params:
             feature_keys (List[MLFeature]): A list of MLFeature objects that should be retrieved from the offline store. 
-            dataset (str): Name of dataset file or source from which feature_keys come from (i.e. driver_stats.parquet). 
+            source (str): Name of dataset file or source from which feature_keys come from (i.e. driver_stats.parquet). 
         """
         # create uuid for dataframe. 
         # register dataframe/uuid into db with the features group uuid
         conn = sqlite3.connect('data/metadata.db')
         curr = conn.cursor() 
-
+        # TODO: CHANGE REGISTER_DATASET TO CALL LINEAGE API TO TAG RUN INSTEAD OF THIS
+        # TODO: REMOVE. MOVE LINEAGE METADATA UPDATE TO _UPDATE_METADATA()
         for feature in feature_keys:
 
             # check if feature is already registered into lineage_table (if: continue, else: register it)
@@ -165,27 +170,19 @@ class FeatureStoreClient(object):
         conn = sqlite3.connect("data/metadata.db")
         curr = conn.cursor()
 
-        # CATALOGING API. UPDATES GROUP_UUID_DATA table 
-        view_name = source
+        f_name = os.path.basename(source)
+        view_name = os.path.splitext(f_name)[0]
 
-        # first check if any of the feature_keys have already been registered to metadata to keep the group_uuid
-        for feature in features:
-            feat_query = f"SELECT view_name FROM GROUP_UUID_DATA WHERE feature='{feature.name}';"
-            df = pd.read_sql_query(feat_query,conn)
-            if not df.empty:
-                feat_group_uuid = df['view_name'].values[0]
-                view_name = feat_group_uuid
-        
-        # insert the features if not already in metadata.db. 
+        # insert the features if not already in metadata.db for same view_name. 
         for feature in features:
             feat_uuid = uuid.uuid4()
             data_type = feature.type
             feature.type = self._convertToValueType(feature.type)
-            feat_query = f"SELECT view_name FROM GROUP_UUID_DATA WHERE feature='{feature.name}';"
+            feat_query = f"SELECT view_name FROM FEATURE_DATA WHERE feature='{feature.name}';"
             curr.execute(feat_query)
             data = curr.fetchall()
             if not data:
-                addData = f"""INSERT INTO GROUP_UUID_DATA VALUES('{feature.name}', '{view_name}','{feat_uuid}', '{data_type}', '{entity_name}')"""
+                addData = f"""INSERT INTO FEATURE_DATA VALUES('{feature.name}', '{view_name}','{feat_uuid}', '{data_type}', '{entity_name}', '{f_name}')"""
                 curr.execute(addData)
 
         conn.commit()
@@ -235,6 +232,7 @@ class FeatureStoreClient(object):
             return ValueType.FLOAT
         else:
             raise Exception("Type does not exist. Acceptable Pandas types: 'int32', 'int64', 'str', 'bool, 'float32', 'float64', 'category', 'bytes'" )
+# TODO REMOVE
 class MLFeature():
 
     """
