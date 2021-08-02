@@ -2,7 +2,7 @@ import pandas as pd
 
 from mlflow.tracking.client import MlflowClient
 
-def ingest(source, feature_keys, entity_name, entity_type):
+def ingest(source, entity_name):
     """
     Batch load feature data to publish into offline store.
     Params:
@@ -13,13 +13,13 @@ def ingest(source, feature_keys, entity_name, entity_type):
     Example usage:
         mlflow.ingest(source=“data/drivers.parquet”, feature_keys=[{"name":"avg_cost", "type": ValueType.INT64}]) 
     """
-    return MlflowClient().ingest(source, feature_keys, entity_name, entity_type)
+    return MlflowClient().ingest(source, entity_name)
 
-def retrieve(feature_keys, entity_df) -> pd.DataFrame:
+def retrieve(feature_list, entity_df) -> pd.DataFrame:
     """
     Get features that have been registered already into the offline store.
     Params:
-        feature_keys (Dict{str:List[MLFeature]}): A dictionary containg a key of parquet source and 
+        feature_list (List[str]): A dictionary containg a key of parquet source and 
     value of list of MLFeature objects that should be retrieved from the offline store. 
     Returns:
         Some object with the features that can be used for batch inferencing or training.
@@ -29,7 +29,11 @@ def retrieve(feature_keys, entity_df) -> pd.DataFrame:
         feature_keys = [quality, alcohol]
         feature_df = mlflow.retrieve(feature_keys, entity_df)
     """
+<<<<<<< HEAD
     return MlflowClient().retrieve(feature_keys, entity_df)
 
 def search_features(database,filter_string):
     return MlflowClient().search_features(database, filter_string)
+=======
+    return MlflowClient().retrieve(feature_list, entity_df)
+>>>>>>> 78291046723eb8da4accb93c55ce6e72c847175b

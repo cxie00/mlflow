@@ -113,8 +113,8 @@ class MlflowClient(object):
 
     # Feature Store API
     
-    def ingest(self, source, feature_keys, entity_name, entity_type):
-        return self._feature_store.ingest(source, feature_keys, entity_name, entity_type)
+    def ingest(self, source, entity_name):
+        return self._feature_store.ingest(source, entity_name)
 
     def retrieve(self, feature_keys, entity_df) -> pd.DataFrame:
         return self._feature_store.retrieve(feature_keys, entity_df)

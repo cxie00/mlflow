@@ -1,6 +1,7 @@
 from google.protobuf.duration_pb2 import Duration
 from feast.feature_store import FeatureStore
 from feast import Entity, FeatureView, Feature, ValueType, FileSource
+from mlflow.entities import MLFeature
 import pandas as pd
 import uuid
 import sqlite3
@@ -15,7 +16,7 @@ class FeatureStoreClient(object):
             repo_path="."
         )
 
-    def ingest(self, source, features, entity_name, entity_type) -> pd.DataFrame:
+    def ingest(self, source, entity_name) -> pd.DataFrame:
 
         """
         Batch load feature data to publish into offline store.
@@ -34,18 +35,23 @@ class FeatureStoreClient(object):
             event_timestamp_column="datetime",
             created_timestamp_column="created",
         )
+
+        source_df = pd.read_parquet(source)
+        entity_type = source_df.dtypes[entity_name]
         entity_type = self._convertToValueType(entity_type)
         entity = Entity(name=entity_name, value_type=entity_type, description="")
 
         entity_df = self._create_entity(source, entity_name)
-        # update metadata with group uuids for Cataloging and Lineage API
-        self._update_metadata(features)
-        self._register_dataset(features, source)
 
-        # our parquet files contain sample data that includes a driver_id column, timestamps and
-        # three feature column. 
         f_name = os.path.basename(source)
-        name, f_ext = os.path.splitext(f_name)
+        name = os.path.splitext(f_name)[0]
+
+        features = self._get_features(source_df.drop([entity_name, "created", "datetime"], axis=1)) 
+
+        # update metadata with group uuids for Cataloging and Lineage API
+        self._update_metadata(features, name, entity_name)
+        # self._register_dataset(features, source)
+
         feature_view = FeatureView(
             name=name,
             entities=[entity.name],
@@ -60,28 +66,31 @@ class FeatureStoreClient(object):
         self.fs.apply([entity, feature_view])
         return entity_df
 
-    def retrieve(self, feature_keys, entity_df) -> pd.DataFrame:
+    def retrieve(self, feature_list, entity_df) -> pd.DataFrame:
 
         """
         Get features that have been registered already into the offline store.
         Params:
-            feature_keys (Dict{str:List[MLFeature]}): A dictionary containg a key of parquet source and 
+            features (List[str]): A dictionary containg a key of parquet source and 
         value of list of MLFeature objects that should be retrieved from the offline store. 
+            entity_df: pandas DataFrame containing entity_name and event_timestamp columns of data to be retrieved.
         Returns:
-            Some object with the features that can be used for batch inferencing or training.
+            pandas DataFrame with the features that can be used for batch inferencing or training.
         Example usage:
-            quality = MLFeature("quality", "int64")
-            alcohol = MLFeature("alcohol", "float32")
-            feature_keys = [quality, alcohol]
+            feature_keys = ["alcohol", "quality"]
             feature_df = mlflow.retrieve(feature_keys, entity_df)
         """
-        
+        entity_name = list(entity_df.drop(["event_timestamp"], axis=1))[0] # future note: assumes only thing left in df is the entity
         refs = []
-        for source, features in feature_keys.items():
-            f_name = os.path.basename(source)
-            name, f_ext = os.path.splitext(f_name)
-            for feature in features:
-                refs.append("{}:{}".format(name,feature.name))
+        conn = sqlite3.connect('data/metadata.db')
+        for feature in feature_list:
+            # from metadata.db, grab the view_name whose feature str matches feature AND has the same entity name
+            view_query = f"SELECT view_name FROM FEATURE_DATA WHERE feature='{feature}' and entity_name='{entity_name}';"
+            df = pd.read_sql_query(view_query,conn)
+            view = df['view_name'].values[0]
+            refs.append("{}:{}".format(view,feature))    
+        conn.commit()
+        conn.close()
 
         # retrieving offline data with Feast's get_historical_features
         training_df = self.fs.get_historical_features(
@@ -91,7 +100,25 @@ class FeatureStoreClient(object):
 
         return training_df
 
-    def _register_dataset(self, feature_keys, dataset) -> None:
+    def _get_features(self, source_df):
+        """
+        Internal helper function that reads through a pandas DataFrame to infer features and their types
+        into a list of MLFeature objects (defined in mlflow/mlflow/entities/mlfeature.py).
+        Params: 
+            source_df (pandas DataFrame): DataFrame of dataset ingested. Contains event timestamp, entity id, and feature
+                columns.
+        Returns:
+            List of MLFeature objects to be ingested.
+        """
+        cols = list(source_df)
+        features = []
+        for col in cols:
+            f_type = source_df.dtypes[col]
+            feature = MLFeature(col, f_type)
+            features.append(feature)
+        return features
+
+    def _register_dataset(self) -> None:
         """
         Internally registers a data source and ingested features as a dataset within the system, giving the dataset a uuid 
         and creating entries in FEAT_DATA_UUID table which link that dataset_id with all of the feature_ids in it.
@@ -104,34 +131,13 @@ class FeatureStoreClient(object):
         conn = sqlite3.connect('data/metadata.db')
         curr = conn.cursor() 
 
-        data_uuid = uuid.uuid4()
-        for feature in feature_keys:
-
-            # check if feature is already registered into lineage_table (if: continue, else: register it)
-            feat_query = f"SELECT feature_uuid FROM GROUP_UUID_DATA WHERE feature='{feature.name}';"
-            df = pd.read_sql_query(feat_query,conn)
-            feat_uuid = df['feature_uuid'].values[0]
-            curr.execute("select feature from FEAT_DATA_UUID where feature=?", (feature.name,))
-            feature_exists = curr.fetchall()
-
-            if not feature_exists:
-                # check if dataset doesn't already exist in lineage table and register dataset with new uuid
-                data_query = f"SELECT data_uuid FROM FEAT_DATA_UUID WHERE dataset='{dataset}';"
-                df = pd.read_sql_query(data_query,conn)
-                if df.empty:
-                    addData = f"""INSERT INTO FEAT_DATA_UUID VALUES('{feature.name}','{feat_uuid}', '{dataset}', '{data_uuid}')"""
-                    curr.execute(addData)
-                    continue           
-                # dataset is already in lineage table: register dataset with existing uuid
-                existing_data_uuid = df['data_uuid'].values[0]
-                addData = f"""INSERT INTO FEAT_DATA_UUID VALUES('{feature.name}','{feat_uuid}', '{dataset}', '{existing_data_uuid}')"""
-                curr.execute(addData)   
+        # TODO: USE LINEAGE API TO TAG RUN ID 
 
         conn.commit()
         conn.close()
 
 
-    def _update_metadata(self, feature_keys) -> None:
+    def _update_metadata(self, features, source, entity_name) -> None:
 
         """
         Internally populate metadata.db with features and their group IDs when ingested together.
@@ -142,26 +148,19 @@ class FeatureStoreClient(object):
         conn = sqlite3.connect("data/metadata.db")
         curr = conn.cursor()
 
-        group_uuid = uuid.uuid4()
+        f_name = os.path.basename(source)
+        view_name = os.path.splitext(f_name)[0]
 
-        # first check if any of the feature_keys have already been registered to metadata to keep the group_uuid
-        for feature in feature_keys:
-            feat_query = f"SELECT group_uuid FROM GROUP_UUID_DATA WHERE feature='{feature.name}';"
-            df = pd.read_sql_query(feat_query,conn)
-            if not df.empty:
-                feat_group_uuid = df['group_uuid'].values[0]
-                group_uuid = feat_group_uuid
-        
-        # insert the features if not already in metadata.db. 
-        for feature in feature_keys:
+        # insert the features if not already in metadata.db for same view_name. 
+        for feature in features:
             feat_uuid = uuid.uuid4()
             data_type = feature.type
             feature.type = self._convertToValueType(feature.type)
-            feat_query = f"SELECT group_uuid FROM GROUP_UUID_DATA WHERE feature='{feature.name}';"
+            feat_query = f"SELECT view_name FROM FEATURE_DATA WHERE feature='{feature.name}';"
             curr.execute(feat_query)
             data = curr.fetchall()
             if not data:
-                addData = f"""INSERT INTO GROUP_UUID_DATA VALUES('{feature.name}', '{group_uuid}','{feat_uuid}', '{data_type}')"""
+                addData = f"""INSERT INTO FEATURE_DATA VALUES('{feature.name}', '{view_name}','{feat_uuid}', '{data_type}', '{entity_name}', '{f_name}')"""
                 curr.execute(addData)
 
         conn.commit()
@@ -199,7 +198,7 @@ class FeatureStoreClient(object):
             return ValueType.INT64
         elif dtype == "int32":
             return ValueType.INT32
-        elif dtype == "str" or dtype == "category":
+        elif dtype == "str":
             return ValueType.STRING
         elif dtype == "bytes":
             return ValueType.BYTES
@@ -211,6 +210,7 @@ class FeatureStoreClient(object):
             return ValueType.FLOAT
         else:
             raise Exception("Type does not exist. Acceptable Pandas types: 'int32', 'int64', 'str', 'bool, 'float32', 'float64', 'category', 'bytes'" )
+<<<<<<< HEAD
     #Cataloging API
     def search_features(self, database, filter_string):
 
@@ -235,3 +235,5 @@ class MLFeature():
         self.type = type
 
 
+=======
+>>>>>>> 78291046723eb8da4accb93c55ce6e72c847175b
