@@ -29,11 +29,7 @@ def retrieve(feature_list, entity_df) -> pd.DataFrame:
         feature_keys = [quality, alcohol]
         feature_df = mlflow.retrieve(feature_keys, entity_df)
     """
-<<<<<<< HEAD
-    return MlflowClient().retrieve(feature_keys, entity_df)
+    return MlflowClient().retrieve(feature_list, entity_df)
 
 def search_features(database,filter_string):
     return MlflowClient().search_features(database, filter_string)
-=======
-    return MlflowClient().retrieve(feature_list, entity_df)
->>>>>>> 78291046723eb8da4accb93c55ce6e72c847175b
