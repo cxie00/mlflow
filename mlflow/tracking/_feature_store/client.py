@@ -50,19 +50,19 @@ class FeatureStoreClient(object):
             event_timestamp_column="datetime",
             created_timestamp_column="created",
         )
-
+        
         source_df = pd.read_parquet(source)
         entity_type = source_df.dtypes[entity_name]
         entity_type = self._convertToValueType(entity_type)
         entity = Entity(name=entity_name, value_type=entity_type, description="")
-
+        
         entity_df = self._create_entity(source, entity_name)
-
+        
         f_name = os.path.basename(source)
         name = os.path.splitext(f_name)[0]
 
         features = self._get_features(source_df.drop([entity_name, "created", "datetime"], axis=1)) 
-
+        
         # update metadata with group uuids for Cataloging and Lineage API
         self._update_metadata(features, name, entity_name)
         # self._register_dataset(features, source)
@@ -106,7 +106,7 @@ class FeatureStoreClient(object):
             refs.append("{}:{}".format(view,feature))    
         conn.commit()
         conn.close()
-
+        
         # retrieving offline data with Feast's get_historical_features
         training_df = self.fs.get_historical_features(
             entity_df=entity_df, 
@@ -147,7 +147,7 @@ class FeatureStoreClient(object):
         curr = conn.cursor() 
 
         # TODO: USE LINEAGE API TO TAG RUN ID 
-
+        
         conn.commit()
         conn.close()
 
@@ -236,6 +236,43 @@ class FeatureStoreClient(object):
             rows = curr.fetchall()
             return rows
 
+    def search_by_entity(database, filter_string):
+    
+        conn = sqlite3.connect(database)
+        curr = conn.cursor()
+
+        feature_group_uuid = "SELECT entity_name FROM FEATURE_DATA WHERE " + filter_string
+    
+        curr.execute(feature_group_uuid)
+        get_uuid = curr.fetchall()
+        my_list = get_uuid
+        
+        my_tuple = get_uuid
+        my_tuple = my_list[0]
+        
+        table_uuid = "SELECT * FROM  FEATURE_DATA WHERE entity_name = '" + my_tuple[0]+ "'"
+        curr.execute(table_uuid)
+        rows = curr.fetchall()
+        return rows
+
+    def search_related_features(database, filter_string):
+    
+        conn = sqlite3.connect(database)
+        curr = conn.cursor()
+
+        feature_group_uuid = "SELECT view_name FROM FEATURE_DATA WHERE " + filter_string
+        
+        curr.execute(feature_group_uuid)
+        get_uuid = curr.fetchall()
+        my_list = get_uuid
+        
+        my_tuple = get_uuid
+        my_tuple = my_list[0]
+        
+        table_uuid = "SELECT * FROM  FEATURE_DATA WHERE view_name = '" + my_tuple[0]+ "'"
+        curr.execute(table_uuid)
+        rows = curr.fetchall()
+        return rows
     #Lineage API
     
 
@@ -251,7 +288,7 @@ class FeatureStoreClient(object):
         if type == 'datetime64':
             return DataType.datetime
         #note: pandas does not have 'long', 'double', 'binary' types
-
+    
     def parse_feature_metadata(self) -> List[FeatureColSpec]:
         """This function is called after features have been ingested and 
         the corresponding metadata.db has been created. Here, we parse
@@ -276,8 +313,8 @@ class FeatureStoreClient(object):
             feature_colspec_list.append(feature)
             row = curr.fetchone()
         return feature_colspec_list
-            
-
+    
+        
 
     def infer_signature_override(self, model_input: Any, model_output: "MlflowInferableDataset" = None
     ) -> ModelSignature:
@@ -285,8 +322,8 @@ class FeatureStoreClient(object):
         inputs = Schema(self.parse_feature_metadata())
         outputs = _infer_schema(model_output) if model_output is not None else None
         return ModelSignature(inputs, outputs)
-
-
+    
+        
     def map_run_to_features(self, feature_list: List[FeatureColSpec], feature_runs_dict) ->None:
         '''updates the feature_runs_dict. tags the active ml run id to each 
         corresponding feature in the inputted 
@@ -306,10 +343,3 @@ class FeatureStoreClient(object):
                 value_set.add(run_id)
                 feature_runs_dict[f.name] = value_set
                 del value_set
-
-    
-
-
-
-
-
