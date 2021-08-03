@@ -65,7 +65,7 @@ class FeatureStoreClient(object):
         features = self._get_features(source_df.drop([entity_name, "created", "datetime"], axis=1)) 
 
         # Update metadata with group uuids for Cataloging and Lineage API
-        self._update_metadata(features, name, entity_name)
+        self._update_metadata(features, f_name, entity_name)
 
         feature_view = FeatureView(
             name=name,
@@ -157,9 +157,7 @@ class FeatureStoreClient(object):
         """
         conn = sqlite3.connect("data/metadata.db")
         curr = conn.cursor()
-
-        f_name = os.path.basename(source)
-        view_name = os.path.splitext(f_name)[0]
+        view_name = os.path.splitext(source)[0]
 
         # Insert the features if not already in metadata.db for same view_name. 
         for feature in features:
@@ -170,7 +168,7 @@ class FeatureStoreClient(object):
             curr.execute(feat_query)
             data = curr.fetchall()
             if not data:
-                addData = f"""INSERT INTO FEATURE_DATA VALUES('{feature.name}', '{view_name}','{feat_uuid}', '{data_type}', '{entity_name}', '{f_name}')"""
+                addData = f"""INSERT INTO FEATURE_DATA VALUES('{feature.name}', '{view_name}','{source}', '{data_type}', '{entity_name}', '{feat_uuid}')"""
                 curr.execute(addData)
 
         conn.commit()
