@@ -44,10 +44,10 @@ def search_features(database,filter_string):
 
 def infer_signature_override(self, model_input: Any, model_output: "MlflowInferableDataset" = None
     ) -> ModelSignature:
-    return MlflowClient().infer_signature_override(self, model_input, model_output) 
+    return MlflowClient().infer_signature_override(model_input, model_output) 
 
 def parse_feature_metadata(self) -> List[FeatureColSpec]:
-    return MlflowClient().parse_feature_metadata(self)
+    return MlflowClient().parse_feature_metadata()
     
 def search_related_features(database, filter_string):
     return MlflowClient().search_related_features(database, filter_string)
