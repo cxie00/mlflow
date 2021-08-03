@@ -18,7 +18,8 @@ _sym_db = _symbol_database.Default()
 from .scalapb import scalapb_pb2 as scalapb_dot_scalapb__pb2
 from . import databricks_pb2 as databricks__pb2
 
-
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='service.proto',
   package='mlflow',
