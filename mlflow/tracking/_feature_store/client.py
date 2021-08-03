@@ -318,31 +318,12 @@ class FeatureStoreClient(object):
 
     def infer_signature_override(self, model_input: Any, model_output: "MlflowInferableDataset" = None
     ) -> ModelSignature:
-        print("infer signature override...")
         inputs = Schema(self.parse_feature_metadata())
         outputs = _infer_schema(model_output) if model_output is not None else None
         return ModelSignature(inputs, outputs)
 
 
-    def map_run_to_features(self, feature_list: List[FeatureColSpec], feature_runs_dict) ->None:
-        '''updates the feature_runs_dict. tags the active ml run id to each 
-        corresponding feature in the inputted 
-        list'''
-        run_id = self.active_run().info.run_id
-        for f in feature_list:
-            if f.name in feature_list:
-                value_set = set()
-                x = feature_runs_dict.pop(f.name)
-                value_set.update(x)
-                value_set.add(run_id)
-                feature_runs_dict[f.name] = value_set
-                del value_set
-                del x
-            else:
-                value_set = set()
-                value_set.add(run_id)
-                feature_runs_dict[f.name] = value_set
-                del value_set
+    
 
     
 
