@@ -13,6 +13,8 @@ Python (native) `pickle <https://scikit-learn.org/stable/modules/model_persisten
 import os
 import logging
 import pickle
+from urllib import parse
+from mlflow.tracking._feature_store.fluent import parse_feature_metadata
 import yaml
 import warnings
 
@@ -450,9 +452,26 @@ def load_model(model_uri):
     flavor_conf = _get_flavor_configuration(model_path=local_model_path, flavor_name=FLAVOR_NAME)
     sklearn_model_artifacts_path = os.path.join(local_model_path, flavor_conf["pickled_model"])
     serialization_format = flavor_conf.get("serialization_format", SERIALIZATION_FORMAT_PICKLE)
-    return _load_model_from_local_file(
+    
+    model = _load_model_from_local_file(
         path=sklearn_model_artifacts_path, serialization_format=serialization_format
     )
+    #change to list of feature objects
+    #model.train_features = "dummy string"
+    model_path = local_model_path
+    model_configuration_path = os.path.join(model_path, MLMODEL_FILE_NAME)
+    if not os.path.exists(model_configuration_path):
+        raise MlflowException(
+            'Could not find an "{model_file}" configuration file at "{model_path}"'.format(
+                model_file=MLMODEL_FILE_NAME, model_path=model_path
+            ),
+            RESOURCE_DOES_NOT_EXIST,
+        )
+
+    model_conf = Model.load(model_configuration_path)
+    model.train_features = model_conf.signature.inputs.inputs
+    print("type for model.train_features: " + str(type(model.train_features)))
+    return model
 
 
 @experimental

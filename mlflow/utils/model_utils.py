@@ -38,6 +38,7 @@ def _get_flavor_configuration(model_path, flavor_name):
     return conf
 
 
+
 def _get_flavor_configuration_from_uri(model_uri, flavor_name):
     """
     Obtains the configuration for the specified flavor from the specified

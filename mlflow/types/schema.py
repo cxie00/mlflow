@@ -322,7 +322,7 @@ class Schema(object):
     Combination of named and unnamed data inputs are not allowed.
     """
 
-    def __init__(self, inputs: List[Union[ColSpec, TensorSpec]]):
+    def __init__(self, inputs: List[Union[ColSpec, TensorSpec, FeatureColSpec]]):
         if not (
             all(map(lambda x: x.name is None, inputs))
             or all(map(lambda x: x.name is not None, inputs))
@@ -351,7 +351,7 @@ class Schema(object):
         self._inputs = inputs
 
     @property
-    def inputs(self) -> List[Union[ColSpec, TensorSpec]]:
+    def inputs(self) -> List[Union[ColSpec, TensorSpec, FeatureColSpec]]:
         """Representation of a dataset that defines this schema."""
         return self._inputs
 
@@ -464,7 +464,12 @@ class Schema(object):
         """ Deserialize from a json string."""
 
         def read_input(x: dict):
-            return TensorSpec.from_json_dict(**x) if x["type"] == "tensor" else ColSpec(**x)
+            if x["type"] == "tensor":
+                return TensorSpec.from_json_dict(**x)
+            elif x.get("feature_id", None) is not None:
+                return FeatureColSpec(**x)
+            else:
+                return ColSpec(**x)
 
         return cls([read_input(x) for x in json.loads(json_str)])
 
