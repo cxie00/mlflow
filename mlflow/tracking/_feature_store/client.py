@@ -20,8 +20,7 @@ from typing import Dict, Any, List, Union, Optional
 from mlflow.models.signature import  ModelSignature, Schema
 from mlflow.types.utils import _infer_schema
 
-# from mlflow.tracking._tracking_service.client import TrackingServiceClient
-# from mlflow.tracking.fluent import active_run
+
 
 class FeatureStoreClient(object):
     #Batch Context API
@@ -65,9 +64,8 @@ class FeatureStoreClient(object):
 
         features = self._get_features(source_df.drop([entity_name, "created", "datetime"], axis=1)) 
 
-        # update metadata with group uuids for Cataloging and Lineage API
-        self._update_metadata(features, name, entity_name)
-        # self._register_dataset(features, source)
+        # Update metadata with group uuids for Cataloging and Lineage API
+        self._update_metadata(features, f_name, entity_name)
 
         feature_view = FeatureView(
             name=name,
@@ -101,7 +99,7 @@ class FeatureStoreClient(object):
         refs = []
         conn = sqlite3.connect('data/metadata.db')
         for feature in feature_list:
-            # from metadata.db, grab the view_name whose feature str matches feature AND has the same entity name
+            # From metadata.db, grab the view_name whose feature str matches feature AND has the same entity name
             view_query = f"SELECT view_name FROM FEATURE_DATA WHERE feature='{feature}' and entity_name='{entity_name}';"
             df = pd.read_sql_query(view_query,conn)
             view = df['view_name'].values[0]
@@ -109,11 +107,9 @@ class FeatureStoreClient(object):
         conn.commit()
         conn.close()
         
-        # run_id = active_run().info.run_id
-        # client = TrackingServiceClient("/mlruns")
-        # client.log_param(run_id, "features retrieved", feature_list)
-
-        # retrieving offline data with Feast's get_historical_features
+        self._track_retrieved_features(feature_list)
+        
+        # Retrieving offline data with Feast's get_historical_features
         training_df = self.fs.get_historical_features(
             entity_df=entity_df, 
             feature_refs = refs
@@ -139,6 +135,17 @@ class FeatureStoreClient(object):
             features.append(feature)
         return features
 
+    def _track_retrieved_features(self, feature_list):
+        """
+        Registers feaures retrieved for training into tracking_uri
+        """
+        # Log the features retrieved in tracking uri. 
+        # The delayed import is to avoid circular import for log_param
+        from mlflow.tracking._tracking_service.client import TrackingServiceClient
+        from mlflow.tracking.fluent import active_run
+        run_id = active_run().info.run_id
+        client = TrackingServiceClient("mlruns/")
+        client.log_param(run_id, "features retrieved", feature_list)
 
     def _update_metadata(self, features, source, entity_name) -> None:
 
@@ -150,11 +157,9 @@ class FeatureStoreClient(object):
         """
         conn = sqlite3.connect("data/metadata.db")
         curr = conn.cursor()
+        view_name = os.path.splitext(source)[0]
 
-        f_name = os.path.basename(source)
-        view_name = os.path.splitext(f_name)[0]
-
-        # insert the features if not already in metadata.db for same view_name. 
+        # Insert the features if not already in metadata.db for same view_name. 
         for feature in features:
             feat_uuid = uuid.uuid4()
             data_type = feature.type
@@ -163,7 +168,7 @@ class FeatureStoreClient(object):
             curr.execute(feat_query)
             data = curr.fetchall()
             if not data:
-                addData = f"""INSERT INTO FEATURE_DATA VALUES('{feature.name}', '{view_name}','{feat_uuid}', '{data_type}', '{entity_name}', '{f_name}')"""
+                addData = f"""INSERT INTO FEATURE_DATA VALUES('{feature.name}', '{view_name}','{source}', '{data_type}', '{entity_name}', '{feat_uuid}')"""
                 curr.execute(addData)
 
         conn.commit()
