@@ -313,8 +313,9 @@ class Schema(object):
     """
     Specification of a dataset.
 
-    Schema is represented as a list of :py:class:`ColSpec` or :py:class:`TensorSpec`. A combination
-    of `ColSpec` and `TensorSpec` is not allowed.
+    Schema is represented as a list of :py:class:`ColSpec` or :py:class:`TensorSpec` or 
+    or :py:class:`FeatureColSpec`. A combination of
+    of `ColSpec` and `TensorSpec` and 'FeatureColSpec' is not allowed.
 
     The dataset represented by a schema can be named, with unique non empty names for every input.
     In the case of :py:class:`ColSpec`, the dataset columns can be unnamed with implicit integer
@@ -334,10 +335,11 @@ class Schema(object):
         if not (
             all(map(lambda x: isinstance(x, TensorSpec), inputs))
             or all(map(lambda x: isinstance(x, ColSpec), inputs))
+            or all(map(lambda x: isinstance(x, FeatureColSpec), inputs))
         ):
             raise MlflowException(
-                "Creating Schema with a combination of {0} and {1} is not supported. "
-                "Please choose one of {0} or {1}".format(ColSpec.__class__, TensorSpec.__class__)
+                "Creating Schema with a combination of {0} and {1} and {2} is not supported. "
+                "Please choose one of {0} or {1} or {2}".format(ColSpec.__class__, TensorSpec.__class__, FeatureColSpec.__class__)
             )
         if (
             all(map(lambda x: isinstance(x, TensorSpec), inputs))

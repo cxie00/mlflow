@@ -15,6 +15,7 @@ import logging
 import pickle
 from urllib import parse
 from mlflow.tracking._feature_store.fluent import parse_feature_metadata
+from mlflow.types.schema import FeatureColSpec
 import yaml
 import warnings
 
@@ -456,8 +457,6 @@ def load_model(model_uri):
     model = _load_model_from_local_file(
         path=sklearn_model_artifacts_path, serialization_format=serialization_format
     )
-    #change to list of feature objects
-    #model.train_features = "dummy string"
     model_path = local_model_path
     model_configuration_path = os.path.join(model_path, MLMODEL_FILE_NAME)
     if not os.path.exists(model_configuration_path):
@@ -469,8 +468,12 @@ def load_model(model_uri):
         )
 
     model_conf = Model.load(model_configuration_path)
-    model.train_features = model_conf.signature.inputs.inputs
-    print("type for model.train_features: " + str(type(model.train_features)))
+    signature_inputs = model_conf.signature.inputs.inputs
+    feature_list = list()
+    for s in signature_inputs:
+        feature_list.append(s.to_dict())
+
+    model.train_features = feature_list
     return model
 
 
