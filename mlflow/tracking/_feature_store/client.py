@@ -2,6 +2,7 @@ from google.protobuf.duration_pb2 import Duration
 from feast.feature_store import FeatureStore
 from feast import Entity, FeatureView, Feature, ValueType, FileSource
 from mlflow.entities import MLFeature
+
 import pandas as pd
 import uuid
 import sqlite3
@@ -19,7 +20,8 @@ from typing import Dict, Any, List, Union, Optional
 from mlflow.models.signature import  ModelSignature, Schema
 from mlflow.types.utils import _infer_schema
 
-
+# from mlflow.tracking._tracking_service.client import TrackingServiceClient
+# from mlflow.tracking.fluent import active_run
 
 class FeatureStoreClient(object):
     #Batch Context API
@@ -106,13 +108,17 @@ class FeatureStoreClient(object):
             refs.append("{}:{}".format(view,feature))    
         conn.commit()
         conn.close()
+        
+        # run_id = active_run().info.run_id
+        # client = TrackingServiceClient("/mlruns")
+        # client.log_param(run_id, "features retrieved", feature_list)
 
         # retrieving offline data with Feast's get_historical_features
         training_df = self.fs.get_historical_features(
             entity_df=entity_df, 
             feature_refs = refs
         ).to_df()
-
+        
         return training_df
 
     def _get_features(self, source_df):
@@ -132,24 +138,6 @@ class FeatureStoreClient(object):
             feature = MLFeature(col, f_type)
             features.append(feature)
         return features
-
-    def _register_dataset(self) -> None:
-        """
-        Internally registers a data source and ingested features as a dataset within the system, giving the dataset a uuid 
-        and creating entries in FEAT_DATA_UUID table which link that dataset_id with all of the feature_ids in it.
-        Params:
-            feature_keys (List[MLFeature]): A list of MLFeature objects that should be retrieved from the offline store. 
-            dataset (str): Name of dataset file or source from which feature_keys come from (i.e. driver_stats.parquet). 
-        """
-        # create uuid for dataframe. 
-        # register dataframe/uuid into db with the features group uuid
-        conn = sqlite3.connect('data/metadata.db')
-        curr = conn.cursor() 
-
-        # TODO: USE LINEAGE API TO TAG RUN ID 
-
-        conn.commit()
-        conn.close()
 
 
     def _update_metadata(self, features, source, entity_name) -> None:
@@ -225,7 +213,9 @@ class FeatureStoreClient(object):
             return ValueType.FLOAT
         else:
             raise Exception("Type does not exist. Acceptable Pandas types: 'int32', 'int64', 'str', 'bool, 'float32', 'float64', 'category', 'bytes'" )
+    
     #Cataloging API
+
     def search_features(self, database, filter_string):
 
         conn = sqlite3.connect(database)
