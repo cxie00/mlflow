@@ -48,3 +48,10 @@ def infer_signature_override(self, model_input: Any, model_output: "MlflowInfera
 
 def parse_feature_metadata(self) -> List[FeatureColSpec]:
     return MlflowClient().parse_feature_metadata(self)
+    
+def search_related_features(database, filter_string):
+    return MlflowClient().search_related_features(database, filter_string)
+
+def search_by_entity(database, filter_string):
+    return MlflowClient().search_by_entity(database, filter_string)
+

@@ -124,6 +124,12 @@ class MlflowClient(object):
     def search_features(self, database, filter_string):
         return self._feature_store.search_features(database,filter_string)
 
+    def search_related_features(self, database, filter_string):
+        return self._feature_store.search_related_features(database, filter_string)
+
+    def search_by_entity(self, database, filter_string):
+        return self._feature_store.search_by_entity(database, filter_string)
+
     #lineage
     def infer_signature_override(self, model_input, model_output):
         return self._feature_store.infer_signature_override(self, model_input, model_output)
@@ -131,6 +137,8 @@ class MlflowClient(object):
     def parse_feature_metadata(self):
         return self._feature_store.parse_feature_metadata(self)
 
+    
+        
     # Tracking API
 
     def get_run(self, run_id: str) -> Run:

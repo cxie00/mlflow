@@ -154,6 +154,8 @@ ingest = mlflow.tracking._feature_store.fluent.ingest
 retrieve = mlflow.tracking._feature_store.fluent.retrieve
 run = projects.run
 search_features = mlflow.tracking._feature_store.fluent.search_features
+search_related_features = mlflow.tracking._feature_store.fluent.search_related_features
+search_by_entity = mlflow.tracking._feature_store.fluent.search_by_entity
 infer_signature_override = mlflow.tracking._feature_store.fluent.infer_signature_override
 parse_feature_metadata = mlflow.tracking._feature_store.fluent.parse_feature_metadata
 
