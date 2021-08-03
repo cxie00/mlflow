@@ -132,10 +132,10 @@ class MlflowClient(object):
 
     #lineage
     def infer_signature_override(self, model_input, model_output):
-        return self._feature_store.infer_signature_override(self, model_input, model_output)
+        return self._feature_store.infer_signature_override(model_input, model_output)
 
     def parse_feature_metadata(self):
-        return self._feature_store.parse_feature_metadata(self)
+        return self._feature_store.parse_feature_metadata()
 
     
         
