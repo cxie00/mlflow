@@ -236,7 +236,7 @@ class FeatureStoreClient(object):
             rows = curr.fetchall()
             return rows
 
-    def search_by_entity(database, filter_string):
+    def search_by_entity(self, database, filter_string):
     
         conn = sqlite3.connect(database)
         curr = conn.cursor()
@@ -255,7 +255,7 @@ class FeatureStoreClient(object):
         rows = curr.fetchall()
         return rows
 
-    def search_related_features(database, filter_string):
+    def search_related_features(self, database, filter_string):
     
         conn = sqlite3.connect(database)
         curr = conn.cursor()
