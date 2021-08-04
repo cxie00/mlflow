@@ -350,22 +350,6 @@ class FeatureStoreClient(object):
                 results.append(feature)
                 i+=1
             return results
-    
-
-class FeatureObjects(object):
-    def __init__(self, feature, view_name, file_name, feature_type, entity_name, feature_uuid):
-            self.name = feature
-            self.view_name = view_name
-            self.file = file_name
-            self.type = feature_type
-            self.entity = entity_name
-            self.uuid = feature_uuid
-
-    def __repr__(self):
-            return f'(name = {self.name}, view_name = {self.view_name}, file_name = {self.file}, data_type = {self.type}, entity = {self.entity}, uuid = {self.uuid})'
-
-    
-            
     #Lineage API
     
 
@@ -414,6 +398,23 @@ class FeatureObjects(object):
         inputs = Schema(self.parse_feature_metadata())
         outputs = _infer_schema(model_output) if model_output is not None else None
         return ModelSignature(inputs, outputs)
+    
+
+class FeatureObjects(object):
+    def __init__(self, feature, view_name, file_name, feature_type, entity_name, feature_uuid):
+            self.name = feature
+            self.view_name = view_name
+            self.file = file_name
+            self.type = feature_type
+            self.entity = entity_name
+            self.uuid = feature_uuid
+
+    def __repr__(self):
+            return f'(name = {self.name}, view_name = {self.view_name}, file_name = {self.file}, data_type = {self.type}, entity = {self.entity}, uuid = {self.uuid})'
+
+    
+            
+    
 
 
     
