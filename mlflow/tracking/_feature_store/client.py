@@ -291,7 +291,7 @@ class FeatureStoreClient(object):
         i = 0
         for feature in my_list:
             new_tuple = my_list[0+i]
-            feature = FeatureObjects(new_tuple[0],new_tuple[1],new_tuple[5],new_tuple[3],new_tuple[4],new_tuple[2])
+            feature = FeatureObjects(new_tuple[0],new_tuple[1],new_tuple[2],new_tuple[3],new_tuple[4],new_tuple[5])
             results.append(feature)
             i+=1
         return results
