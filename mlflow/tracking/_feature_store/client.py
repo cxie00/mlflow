@@ -291,7 +291,7 @@ class FeatureStoreClient(object):
         i = 0
         for feature in my_list:
             new_tuple = my_list[0+i]
-            feature = FeatureObjects(new_tuple[0],new_tuple[1],new_tuple[2],new_tuple[3],new_tuple[4],new_tuple[5])
+            feature = FeatureObjects(new_tuple[0],new_tuple[1],new_tuple[5],new_tuple[3],new_tuple[4],new_tuple[2])
             results.append(feature)
             i+=1
         return results
@@ -346,22 +346,23 @@ class FeatureStoreClient(object):
             i = 0
             for feature in my_list:
                 new_tuple = my_list[0+i]
-                feature = FeatureObjects(new_tuple[0],new_tuple[1],new_tuple[2],new_tuple[3],new_tuple[4],new_tuple[5])
+                feature = FeatureObjects(new_tuple[0],new_tuple[1],new_tuple[5],new_tuple[3],new_tuple[4],new_tuple[2])
                 results.append(feature)
                 i+=1
             return results
     
 
 class FeatureObjects(object):
-    def __init__(self, feature, view_name, feature_uuid, feature_type, entity_name, file_name):
+    def __init__(self, feature, view_name, file_name, feature_type, entity_name, feature_uuid):
             self.name = feature
             self.view_name = view_name
-            self.uuid = feature_uuid
+            self.file = file_name
             self.type = feature_type
             self.entity = entity_name
-            self.file = file_name
+            self.uuid = feature_uuid
+
     def __repr__(self):
-            return f'(name = {self.name}, view_name = {self.view_name}, uuid = {self.uuid}, data_type = {self.type}, entity = {self.entity}, file_name = {self.file})'
+            return f'(name = {self.name}, view_name = {self.view_name}, file_name = {self.file}, data_type = {self.type}, entity = {self.entity}, uuid = {self.uuid})'
 
     
             
