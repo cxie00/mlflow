@@ -385,7 +385,7 @@ class FeatureStoreClient(object):
             type = self.get_data_type(row[3])
             datatype_str = DataType.__repr__(type)
             name = row[0]
-            id = row[2]
+            id = row[5]
             feature = FeatureColSpec(type, name, id)
             feature_colspec_list.append(feature)
             row = curr.fetchone()
@@ -398,10 +398,13 @@ class FeatureStoreClient(object):
         inputs = Schema(self.parse_feature_metadata())
         outputs = _infer_schema(model_output) if model_output is not None else None
         return ModelSignature(inputs, outputs)
+
+    
     
 
 class FeatureObjects(object):
-    def __init__(self, feature, view_name, file_name, feature_type, entity_name, feature_uuid):
+    def __init__(self, feature, view_name, file_name, 
+                feature_type, entity_name, feature_uuid):
             self.name = feature
             self.view_name = view_name
             self.file = file_name
