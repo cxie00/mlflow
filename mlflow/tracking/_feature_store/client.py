@@ -222,7 +222,18 @@ class FeatureStoreClient(object):
     #Cataloging API
 
     def search_features(self, database, filter_string):
+        """
+        Allows the user to search for specific cols 
+        like feature name, data type etc and returns 
+        everything that matches that filter_string
 
+        Params: 
+        database (str): database name user wishes to access using double quotes
+        ex: "metadata.db"
+
+        filter_string (str): feature name they wish to search in the database.
+        ex: "feature = 'alcohol'"
+        """
         conn = sqlite3.connect(database)
         curr = conn.cursor()
         query_string = "SELECT * FROM FEATURE_DATA WHERE " + filter_string
@@ -232,42 +243,128 @@ class FeatureStoreClient(object):
             return rows
 
     def search_by_entity(self, database, filter_string):
-    
+        """
+        Allows the user to search using a filter string ("feature = 'alcohol'") 
+        and database to search for related entity names. 
+        This function will compare the passed in feature's entity name and return every 
+        feature that has the same entity name.
+
+        Params: 
+        database (str): database name user wishes to access using double quotes
+        ex: "metadata.db"
+
+        filter_string (str): feature name they wish to compare entity_names with in the database.
+        ex: "feature = 'alcohol'"
+        """
+        #connect to the database using user input
         conn = sqlite3.connect(database)
         curr = conn.cursor()
 
-        feature_group_uuid = "SELECT entity_name FROM FEATURE_DATA WHERE " + filter_string
-    
-        curr.execute(feature_group_uuid)
-        get_uuid = curr.fetchall()
-        my_list = get_uuid
+        #gets the entity_name of the filter_string from the table 
+        feature_entity_name = "SELECT entity_name FROM FEATURE_DATA WHERE " + filter_string
+        curr.execute(feature_entity_name)
+
+        #view name
+        get_entity_name = curr.fetchall()
         
-        my_tuple = get_uuid
+        #gets all rows of the filter_string from the table
+        feature_entity_name = "SELECT * FROM FEATURE_DATA WHERE " + filter_string
+        curr.execute(feature_entity_name)
+
+        #complete row of filter_string metadata
+        get_entity_name = curr.fetchall()
+        
+        my_list = get_entity_name
+        my_tuple = get_entity_name
         my_tuple = my_list[0]
         
-        table_uuid = "SELECT * FROM  FEATURE_DATA WHERE entity_name = '" + my_tuple[0]+ "'"
-        curr.execute(table_uuid)
-        rows = curr.fetchall()
-        return rows
+        #gets all rows that have the same entity_name as the filter_string
+        table_view_name = "SELECT * FROM  FEATURE_DATA WHERE entity_name = '" + my_tuple[4]+ "'"
+        curr.execute(table_view_name)
+
+        get_all_rows = curr.fetchall()
+        my_list = get_all_rows
+        new_tuple = get_all_rows
+        new_tuple = my_list
+        
+        results = []
+        i = 0
+        for feature in my_list:
+            new_tuple = my_list[0+i]
+            feature = Feature(new_tuple[0],new_tuple[1],new_tuple[2],new_tuple[3],new_tuple[4],new_tuple[5])
+            results.append(feature)
+            i+=1
+        return results
 
     def search_related_features(self, database, filter_string):
-    
-        conn = sqlite3.connect(database)
-        curr = conn.cursor()
+            """
+            Allows the user to search using a filter string ("feature = 'alcohol'") 
+            and database to search for related view names. 
+            This function will compare the passed in feature's view name and return every 
+            feature that has the same view name.
 
-        feature_group_uuid = "SELECT view_name FROM FEATURE_DATA WHERE " + filter_string
-        
-        curr.execute(feature_group_uuid)
-        get_uuid = curr.fetchall()
-        my_list = get_uuid
-        
-        my_tuple = get_uuid
-        my_tuple = my_list[0]
-        
-        table_uuid = "SELECT * FROM  FEATURE_DATA WHERE view_name = '" + my_tuple[0]+ "'"
-        curr.execute(table_uuid)
-        rows = curr.fetchall()
-        return rows
+            Params: 
+            database (str): database name user wishes to access using double quotes
+            ex: "metadata.db"
+
+            filter_string (str): feature name they wish to compare view_names with in the database.
+            ex: "feature = 'alcohol'"
+            """
+
+            #connect to the database using user input
+            conn = sqlite3.connect(database)
+            curr = conn.cursor()
+
+            #gets the view_name of the filter_string from the table 
+            feature_view_name = "SELECT view_name FROM FEATURE_DATA WHERE " + filter_string
+            curr.execute(feature_view_name)
+
+            #view name
+            get_view_name = curr.fetchall()
+            
+            #gets all rows of the filter_string from the table
+            feature_view_name = "SELECT * FROM FEATURE_DATA WHERE " + filter_string
+            curr.execute(feature_view_name)
+
+            #complete row of filter_string metadata
+            get_view_name = curr.fetchall()
+            
+            my_list = get_view_name
+            my_tuple = get_view_name
+            my_tuple = my_list[0]
+            
+            #gets all rows that have the same view_name as the filter_string
+            table_view_name = "SELECT * FROM  FEATURE_DATA WHERE view_name = '" + my_tuple[1]+ "'"
+            curr.execute(table_view_name)
+
+            get_all_rows = curr.fetchall()
+            my_list = get_all_rows
+            new_tuple = get_all_rows
+            new_tuple = my_list
+            
+            results = []
+            i = 0
+            for feature in my_list:
+                new_tuple = my_list[0+i]
+                feature = Feature(new_tuple[0],new_tuple[1],new_tuple[2],new_tuple[3],new_tuple[4],new_tuple[5])
+                results.append(feature)
+                i+=1
+            return results
+    
+
+class Feature(object):
+    def __init__(self, feature, view_name, feature_uuid, feature_type, entity_name, file_name):
+            self.name = feature
+            self.view_name = view_name
+            self.uuid = feature_uuid
+            self.type = feature_type
+            self.entity = entity_name
+            self.file = file_name
+    def __repr__(self):
+            return f'(name = {self.name}, view_name = {self.view_name}, uuid = {self.uuid}, data_type = {self.type}, entity = {self.entity}, file_name = {self.file})'
+
+    
+            
     #Lineage API
     
 
