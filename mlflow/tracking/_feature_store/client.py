@@ -346,13 +346,13 @@ class FeatureStoreClient(object):
             i = 0
             for feature in my_list:
                 new_tuple = my_list[0+i]
-                feature = Feature(new_tuple[0],new_tuple[1],new_tuple[2],new_tuple[3],new_tuple[4],new_tuple[5])
+                feature = FeatureObjects(new_tuple[0],new_tuple[1],new_tuple[2],new_tuple[3],new_tuple[4],new_tuple[5])
                 results.append(feature)
                 i+=1
             return results
     
 
-class Feature(object):
+class FeatureObjects(object):
     def __init__(self, feature, view_name, feature_uuid, feature_type, entity_name, file_name):
             self.name = feature
             self.view_name = view_name
