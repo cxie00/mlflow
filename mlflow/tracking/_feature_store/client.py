@@ -9,21 +9,15 @@ import sqlite3
 import os 
 
 #lineage imports
-from mlflow.entities import run
-import numpy as np
-import sqlite3
-import sys
-import os
-from mlflow.types.schema import DataType, ColSpec, FeatureColSpec
-from mlflow.exceptions import MlflowException
-from typing import Dict, Any, List, Union, Optional
+from mlflow.types.schema import DataType, FeatureColSpec
+from typing import Any, List
 from mlflow.models.signature import  ModelSignature, Schema
 from mlflow.types.utils import _infer_schema
 
 
 
 class FeatureStoreClient(object):
-    #Batch Context API
+    
     """
     Client of an MLflow Feature Store that ingests and retrieves batch data.
     """
@@ -31,14 +25,15 @@ class FeatureStoreClient(object):
         self.fs = FeatureStore(
             repo_path="."
         )
+    
+    # Batch Context API (Chloe X.)
 
     def ingest(self, source, entity_name) -> pd.DataFrame:
-
         """
         Batch load feature data to publish into offline store.
         Params:
             source (str or pd.Dataframe): Either a file path to parquet file to ingest batch data into offline store.
-            features (List[MLFeature]): A list of MLFeature objects that should be ingested into the offline store.
+            entity_name (str): Str that will act as a join key across datasets to join data with same entity_name together.
         Returns:
             Dataframe of all data ingested with columns of entity_name and datetime.
         Example usage:
@@ -82,12 +77,10 @@ class FeatureStoreClient(object):
         return entity_df
 
     def retrieve(self, feature_list, entity_df) -> pd.DataFrame:
-
         """
         Get features that have been registered already into the offline store.
         Params:
-            features (List[str]): A dictionary containg a key of parquet source and 
-        value of list of MLFeature objects that should be retrieved from the offline store. 
+            features (List[str]): A list of strings of features that the user wants to retrieve. 
             entity_df: pandas DataFrame containing entity_name and event_timestamp columns of data to be retrieved.
         Returns:
             pandas DataFrame with the features that can be used for batch inferencing or training.
@@ -117,7 +110,7 @@ class FeatureStoreClient(object):
         
         return training_df
 
-    def _get_features(self, source_df):
+    def _get_features(self, source_df) -> List[MLFeature]:
         """
         Internal helper function that reads through a pandas DataFrame to infer features and their types
         into a list of MLFeature objects (defined in mlflow/mlflow/entities/mlfeature.py).
@@ -135,9 +128,11 @@ class FeatureStoreClient(object):
             features.append(feature)
         return features
 
-    def _track_retrieved_features(self, feature_list):
+    def _track_retrieved_features(self, feature_list) -> None:
         """
         Registers feaures retrieved for training into tracking_uri
+        Params:
+            feature_list (List[str]): A list of strings of features that the user wants to retrieve. 
         """
         # Log the features retrieved in tracking uri. 
         # The delayed import is to avoid circular import for log_param
@@ -148,7 +143,6 @@ class FeatureStoreClient(object):
         client.log_param(run_id, "features retrieved", feature_list)
 
     def _update_metadata(self, features, source, entity_name) -> None:
-
         """
         Internally populate metadata.db with features and their group IDs when ingested together.
         Upstream integration for Cataloging API to be able to discover related features.
@@ -191,7 +185,6 @@ class FeatureStoreClient(object):
         return entity_df
 
     def _convertToValueType(self, dtype) -> ValueType:
-
         """
         Internal helper method to convert pandas data types to Feast's ValueType.
         ValueType is needed for Entity and Feature instantiation. 
@@ -201,7 +194,6 @@ class FeatureStoreClient(object):
         Returns:
             ValueType conversion of Pandas dtype.
         """
-        
         if dtype == "int64":
             return ValueType.INT64
         elif dtype == "int32":
@@ -219,7 +211,7 @@ class FeatureStoreClient(object):
         else:
             raise Exception("Type does not exist. Acceptable Pandas types: 'int32', 'int64', 'str', 'bool, 'float32', 'float64', 'category', 'bytes'" )
     
-    #Cataloging API
+    # Cataloging API (Erika P.)
 
     def search_features(self, database, filter_string):
         """
@@ -256,22 +248,22 @@ class FeatureStoreClient(object):
         filter_string (str): feature name they wish to compare entity_names with in the database.
         ex: "feature = 'alcohol'"
         """
-        #connect to the database using user input
+        # connect to the database using user input
         conn = sqlite3.connect(database)
         curr = conn.cursor()
 
-        #gets the entity_name of the filter_string from the table 
+        # gets the entity_name of the filter_string from the table 
         feature_entity_name = "SELECT entity_name FROM FEATURE_DATA WHERE " + filter_string
         curr.execute(feature_entity_name)
 
-        #view name
+        # view name
         get_entity_name = curr.fetchall()
         
-        #gets all rows of the filter_string from the table
+        # gets all rows of the filter_string from the table
         feature_entity_name = "SELECT * FROM FEATURE_DATA WHERE " + filter_string
         curr.execute(feature_entity_name)
 
-        #complete row of filter_string metadata
+        # complete row of filter_string metadata
         get_entity_name = curr.fetchall()
         
         my_list = get_entity_name
@@ -297,61 +289,61 @@ class FeatureStoreClient(object):
         return results
 
     def search_related_features(self, database, filter_string):
-            """
-            Allows the user to search using a filter string ("feature = 'alcohol'") 
-            and database to search for related view names. 
-            This function will compare the passed in feature's view name and return every 
-            feature that has the same view name.
+        """
+        Allows the user to search using a filter string ("feature = 'alcohol'") 
+        and database to search for related view names. 
+        This function will compare the passed in feature's view name and return every 
+        feature that has the same view name.
 
-            Params: 
-            database (str): database name user wishes to access using double quotes
-            ex: "metadata.db"
+        Params: 
+        database (str): path to database name user wishes to access using double quotes
+        ex: "metadata.db"
 
-            filter_string (str): feature name they wish to compare view_names with in the database.
-            ex: "feature = 'alcohol'"
-            """
+        filter_string (str): feature name they wish to compare view_names with in the database.
+        ex: "feature = 'alcohol'"
+        """
 
-            #connect to the database using user input
-            conn = sqlite3.connect(database)
-            curr = conn.cursor()
+        # connect to the database using user input
+        conn = sqlite3.connect(database)
+        curr = conn.cursor()
 
-            #gets the view_name of the filter_string from the table 
-            feature_view_name = "SELECT view_name FROM FEATURE_DATA WHERE " + filter_string
-            curr.execute(feature_view_name)
+        # gets the view_name of the filter_string from the table 
+        feature_view_name = "SELECT view_name FROM FEATURE_DATA WHERE " + filter_string
+        curr.execute(feature_view_name)
 
-            #view name
-            get_view_name = curr.fetchall()
-            
-            #gets all rows of the filter_string from the table
-            feature_view_name = "SELECT * FROM FEATURE_DATA WHERE " + filter_string
-            curr.execute(feature_view_name)
+        # view name
+        get_view_name = curr.fetchall()
+        
+        # gets all rows of the filter_string from the table
+        feature_view_name = "SELECT * FROM FEATURE_DATA WHERE " + filter_string
+        curr.execute(feature_view_name)
 
-            #complete row of filter_string metadata
-            get_view_name = curr.fetchall()
-            
-            my_list = get_view_name
-            my_tuple = get_view_name
-            my_tuple = my_list[0]
-            
-            #gets all rows that have the same view_name as the filter_string
-            table_view_name = "SELECT * FROM  FEATURE_DATA WHERE view_name = '" + my_tuple[1]+ "'"
-            curr.execute(table_view_name)
+        # complete row of filter_string metadata
+        get_view_name = curr.fetchall()
+        
+        my_list = get_view_name
+        my_tuple = get_view_name
+        my_tuple = my_list[0]
+        
+        # gets all rows that have the same view_name as the filter_string
+        table_view_name = "SELECT * FROM  FEATURE_DATA WHERE view_name = '" + my_tuple[1]+ "'"
+        curr.execute(table_view_name)
 
-            get_all_rows = curr.fetchall()
-            my_list = get_all_rows
-            new_tuple = get_all_rows
-            new_tuple = my_list
-            
-            results = []
-            i = 0
-            for feature in my_list:
-                new_tuple = my_list[0+i]
-                feature = FeatureObjects(new_tuple[0],new_tuple[1],new_tuple[2],new_tuple[3],new_tuple[4],new_tuple[5])
-                results.append(feature)
-                i+=1
-            return results
-    #Lineage API
+        get_all_rows = curr.fetchall()
+        my_list = get_all_rows
+        new_tuple = get_all_rows
+        new_tuple = my_list
+        
+        results = []
+        i = 0
+        for feature in my_list:
+            new_tuple = my_list[0+i]
+            feature = FeatureObjects(new_tuple[0],new_tuple[1],new_tuple[2],new_tuple[3],new_tuple[4],new_tuple[5])
+            results.append(feature)
+            i+=1
+        return results
     
+    #Lineage API (Kidist)
 
     def get_data_type(self, type) -> DataType:
         if type == 'int64' or type == 'int32':
@@ -364,7 +356,7 @@ class FeatureStoreClient(object):
             return DataType.string
         if type == 'datetime64':
             return DataType.datetime
-        #note: pandas does not have 'long', 'double', 'binary' types
+        # note: pandas does not have 'long', 'double', 'binary' types
 
     def parse_feature_metadata(self) -> List[FeatureColSpec]:
         """This function is called after features have been ingested and 
@@ -380,7 +372,7 @@ class FeatureStoreClient(object):
         curr.execute(fetchData)
         row = curr.fetchone()
         while row is not None:
-            #create a new FeatureColSpec for each row
+            # create a new FeatureColSpec for each row
             row_str = ','.join(row)
             type = self.get_data_type(row[3])
             datatype_str = DataType.__repr__(type)
@@ -391,8 +383,6 @@ class FeatureStoreClient(object):
             row = curr.fetchone()
         return feature_colspec_list
             
-
-
     def infer_signature_override(self, model_input: Any, model_output: "MlflowInferableDataset" = None
     ) -> ModelSignature:
         inputs = Schema(self.parse_feature_metadata())
@@ -404,16 +394,16 @@ class FeatureStoreClient(object):
 
 class FeatureObjects(object):
     def __init__(self, feature, view_name, file_name, 
-                feature_type, entity_name, feature_uuid):
-            self.name = feature
-            self.view_name = view_name
-            self.file = file_name
-            self.type = feature_type
-            self.entity = entity_name
-            self.uuid = feature_uuid
+        feature_type, entity_name, feature_uuid):
+        self.name = feature
+        self.view_name = view_name
+        self.file = file_name
+        self.type = feature_type
+        self.entity = entity_name
+        self.uuid = feature_uuid
 
     def __repr__(self):
-            return f'(name = {self.name}, view_name = {self.view_name}, file_name = {self.file}, data_type = {self.type}, entity = {self.entity}, uuid = {self.uuid})'
+        return f'(name = {self.name}, view_name = {self.view_name}, file_name = {self.file}, data_type = {self.type}, entity = {self.entity}, uuid = {self.uuid})'
 
     
             
