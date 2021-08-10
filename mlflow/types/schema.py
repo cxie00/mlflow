@@ -374,6 +374,10 @@ class Schema(object):
         """Return true iff this schema is specified using TensorSpec"""
         return self.inputs and isinstance(self.inputs[0], TensorSpec)
 
+    def is_feature_col_spec(self) -> bool:
+        """Returns true iff this schema is specified using FeatureColSpec"""
+        return self.inputs and isinstance(self.inputs[0], FeatureColSpec)
+
     def input_names(self) -> List[Union[str, int]]:
         """Get list of data names or range of indices if the schema has no names."""
         return [x.name or i for i, x in enumerate(self.inputs)]

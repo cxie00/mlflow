@@ -27,6 +27,7 @@ implement mutual exclusion manually.
 
 For a lower level API, see the :py:mod:`mlflow.tracking` module.
 """
+#from mlflow.models.signature import infer_signature
 from mlflow.version import VERSION as __version__  # pylint: disable=unused-import
 from mlflow.utils.logging_utils import _configure_mlflow_loggers
 import mlflow.tracking._model_registry.fluent
@@ -156,7 +157,6 @@ run = projects.run
 search_features = mlflow.tracking._feature_store.fluent.search_features
 search_related_features = mlflow.tracking._feature_store.fluent.search_related_features
 search_by_entity = mlflow.tracking._feature_store.fluent.search_by_entity
-infer_signature_override = mlflow.tracking._feature_store.fluent.infer_signature_override
 parse_feature_metadata = mlflow.tracking._feature_store.fluent.parse_feature_metadata
 
 __all__ = [

@@ -371,7 +371,6 @@ class FeatureStoreClient(object):
             mlflow.parse_feature_metadata(“data/metadata.db”) """
 
         feature_colspec_list = list()
-        #conn = sqlite3.connect('data\metadata.db')
         conn = sqlite3.connect(path)
         curr = conn.cursor()
         fetchData = "SELECT * from FEATURE_DATA"
@@ -387,12 +386,6 @@ class FeatureStoreClient(object):
             row = curr.fetchone()
         return feature_colspec_list
             
-    # def infer_signature_override(self, model_input: Any, model_output: "MlflowInferableDataset" = None
-    # ) -> ModelSignature:
-    #     inputs = Schema(self.parse_feature_metadata())
-    #     outputs = _infer_schema(model_output) if model_output is not None else None
-    #     return ModelSignature(inputs, outputs)
-
     
     
 

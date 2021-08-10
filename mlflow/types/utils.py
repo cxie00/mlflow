@@ -7,7 +7,7 @@ from typing import Optional
 
 from mlflow.exceptions import MlflowException
 from mlflow.types import DataType
-from mlflow.types.schema import Schema, ColSpec, TensorSpec
+from mlflow.types.schema import FeatureColSpec, Schema, ColSpec, TensorSpec
 
 
 class TensorsNotSupportedException(MlflowException):

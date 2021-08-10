@@ -42,9 +42,6 @@ def retrieve(feature_list, entity_df) -> pd.DataFrame:
 def search_features(database,filter_string):
     return MlflowClient().search_features(database, filter_string)
 
-def infer_signature_override(model_input: Any, model_output: "MlflowInferableDataset" = None
-    ) -> ModelSignature:
-    return MlflowClient().infer_signature_override(model_input, model_output) 
 
 def parse_feature_metadata(path) -> List[FeatureColSpec]:
     return MlflowClient().parse_feature_metadata(path)

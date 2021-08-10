@@ -9,7 +9,7 @@ from typing import Dict, Any, Union, TYPE_CHECKING
 import pandas as pd
 import numpy as np
 
-from mlflow.types.schema import Schema
+from mlflow.types.schema import FeatureColSpec, Schema
 from mlflow.types.utils import _infer_schema
 
 # At runtime, we don't need  `pyspark.sql.dataframe`
@@ -111,6 +111,7 @@ def infer_signature(
       - dictionary of { name -> numpy.ndarray}
       - numpy.ndarray
       - pyspark.sql.DataFrame
+      - a list of FeatueColSpecs
 
     The element types should be mappable to one of :py:class:`mlflow.types.DataType`.
 
@@ -126,6 +127,15 @@ def infer_signature(
                          dataset.
     :return: ModelSignature
     """
-    inputs = _infer_schema(model_input)
+    
+    #check if model_input is a list of FeatureColSpec objects
+    is_feature_col_spec_list = False
+    if isinstance(model_input, list) and isinstance(model_input[0], FeatureColSpec):
+        is_feature_col_spec_list = True
+    if is_feature_col_spec_list:
+        inputs = Schema(model_input)
+    else:
+        inputs = _infer_schema(model_input)
+
     outputs = _infer_schema(model_output) if model_output is not None else None
     return ModelSignature(inputs, outputs)
