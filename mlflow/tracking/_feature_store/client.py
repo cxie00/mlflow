@@ -358,24 +358,28 @@ class FeatureStoreClient(object):
             return DataType.datetime
         # note: pandas does not have 'long', 'double', 'binary' types
 
-    def parse_feature_metadata(self) -> List[FeatureColSpec]:
-        """This function is called after features have been ingested and 
-        the corresponding metadata.db has been created. Here, we parse
-        through metadata.db and create a list of feature objects"""
+    def parse_feature_metadata(self, path) -> List[FeatureColSpec]:
+        """Parses the metadata database to create a list of FeatureColSpec objects 
+
+            Params: 
+            source (str) : path location of metadata.db 
+
+            Returns: 
+            A list of FeatureColSpec objects of the features that were ingested into metadata.db 
+
+            Example Usage: 
+            mlflow.parse_feature_metadata(“data/metadata.db”) """
 
         feature_colspec_list = list()
-
-        directory_path = os.getcwd()
-        conn = sqlite3.connect('data\metadata.db')
+        #conn = sqlite3.connect('data\metadata.db')
+        conn = sqlite3.connect(path)
         curr = conn.cursor()
         fetchData = "SELECT * from FEATURE_DATA"
         curr.execute(fetchData)
         row = curr.fetchone()
         while row is not None:
             # create a new FeatureColSpec for each row
-            row_str = ','.join(row)
             type = self.get_data_type(row[3])
-            datatype_str = DataType.__repr__(type)
             name = row[0]
             id = row[5]
             feature = FeatureColSpec(type, name, id)
@@ -383,11 +387,11 @@ class FeatureStoreClient(object):
             row = curr.fetchone()
         return feature_colspec_list
             
-    def infer_signature_override(self, model_input: Any, model_output: "MlflowInferableDataset" = None
-    ) -> ModelSignature:
-        inputs = Schema(self.parse_feature_metadata())
-        outputs = _infer_schema(model_output) if model_output is not None else None
-        return ModelSignature(inputs, outputs)
+    # def infer_signature_override(self, model_input: Any, model_output: "MlflowInferableDataset" = None
+    # ) -> ModelSignature:
+    #     inputs = Schema(self.parse_feature_metadata())
+    #     outputs = _infer_schema(model_output) if model_output is not None else None
+    #     return ModelSignature(inputs, outputs)
 
     
     
